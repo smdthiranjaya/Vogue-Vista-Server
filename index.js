@@ -22,6 +22,17 @@ app.post('/login', async (req, res) => {
   }
 });
 
+app.post('/users', async (req, res) => {
+  const { accessToken } = req.body;
+  try {
+    const result = await pool.query('INSERT INTO users(accessToken) VALUES($1) RETURNING *', [accessToken]);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server error');
+  }
+});
+
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
