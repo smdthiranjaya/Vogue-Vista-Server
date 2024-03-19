@@ -52,19 +52,19 @@ app.post('/users/login', async (req, res) => {
 });
 
 
-// app.post('/login', async (req, res) => {
-//   const { email, name, pictureURL, auth0Id } = req.body; // Adjust according to the actual data sent from your client
-//   try {
-//     const result = await pool.query(
-//       'INSERT INTO users(email, name, picture_url, auth0_id) VALUES($1, $2, $3, $4) RETURNING *',
-//       [email, name, pictureURL, auth0Id]
-//     );
-//     res.json(result.rows[0]);
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).send('Server error');
-//   }
-// });
+app.post('/login', async (req, res) => {
+  const { email, name, pictureURL, auth0Id } = req.body; // Adjust according to the actual data sent from your client
+  try {
+    const result = await pool.query(
+      'INSERT INTO users(email, name, picture_url, auth0_id) VALUES($1, $2, $3, $4) RETURNING *',
+      [email, name, pictureURL, auth0Id]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server error');
+  }
+});
 
 app.post('/cart/add', async (req, res) => {
   const { userId, productId, quantity } = req.body; // Assuming the request includes userId or obtained from token
