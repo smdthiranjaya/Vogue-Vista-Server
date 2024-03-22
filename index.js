@@ -143,25 +143,6 @@ app.get('/products', async (req, res) => {
   }
 });
 
-// POST endpoint to add a new product
-app.post('/products', async (req, res) => {
-    try {
-      const { name, description, price, category, color, size, imageUrl } = req.body;
-      const query = `
-        INSERT INTO products(name, description, price, category, color, size, imageUrl)
-        VALUES($1, $2, $3, $4, $5, $6, $7)
-        RETURNING *;`; // SQL query to insert data and return the inserted row
-  
-      // Execute the query
-      const result = await pool.query(query, [name, description, price, category, color, size, imageUrl]);
-  
-      // Send the inserted product as the response
-      res.status(201).json(result.rows[0]);
-    } catch (err) {
-      console.error(err);
-      res.status(500).send('Server error');
-    }
-  });
 
 app.get('/products/:id', async (req, res) => {
   const { id } = req.params;
