@@ -4,8 +4,12 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
-  },
+    "start": "node index.js",
+    "postinstall": "npm rebuild bcrypt --build-from-source"
+  },  
+  "engines": {
+    "node": "20.x"
+  },  
   "keywords": [],
   "author": "",
   "license": "ISC",
