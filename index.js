@@ -1,6 +1,8 @@
 const express = require('express');
 const { Pool } = require('pg');
 const app = express();
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
 app.use(express.json());
 
@@ -49,21 +51,6 @@ app.post('/users/login', async (req, res) => {
       res.status(500).send('Server error');
   }
 });
-
-
-// app.post('/login', async (req, res) => {
-//   const { email, name, pictureURL, auth0Id } = req.body; // Adjust according to the actual data sent from your client
-//   try {
-//     const result = await pool.query(
-//       'INSERT INTO users(email, name, picture_url, auth0_id) VALUES($1, $2, $3, $4) RETURNING *',
-//       [email, name, pictureURL, auth0Id]
-//     );
-//     res.json(result.rows[0]);
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).send('Server error');
-//   }
-// });
 
 app.post('/cart/add', async (req, res) => {
   const { userId, productId, quantity } = req.body; // Assuming the request includes userId or obtained from token
@@ -156,6 +143,25 @@ app.get('/products', async (req, res) => {
   }
 });
 
+// POST endpoint to add a new product
+app.post('/products', async (req, res) => {
+    try {
+      const { name, description, price, category, color, size, imageUrl } = req.body;
+      const query = `
+        INSERT INTO products(name, description, price, category, color, size, imageUrl)
+        VALUES($1, $2, $3, $4, $5, $6, $7)
+        RETURNING *;`; // SQL query to insert data and return the inserted row
+  
+      // Execute the query
+      const result = await pool.query(query, [name, description, price, category, color, size, imageUrl]);
+  
+      // Send the inserted product as the response
+      res.status(201).json(result.rows[0]);
+    } catch (err) {
+      console.error(err);
+      res.status(500).send('Server error');
+    }
+  });
 
 app.get('/products/:id', async (req, res) => {
   const { id } = req.params;
