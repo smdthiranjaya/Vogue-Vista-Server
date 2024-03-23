@@ -64,8 +64,8 @@ app.post('/cart/add', async (req, res) => {
       const cartId = cartResult.rows[0].id;
 
       const newItem = await pool.query(
-          'INSERT INTO cart_items (cart_id, product_id, quantity, color, size, price) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-          [cartId, productId, quantity, color, size, price]
+          'INSERT INTO cart_items (cart_id, product_id, quantity, color, size, price, name) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+          [cartId, productId, quantity, color, size, price, name]
       );
       res.json(newItem.rows[0]);
   } catch (err) {
