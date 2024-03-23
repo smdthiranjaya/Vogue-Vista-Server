@@ -54,7 +54,7 @@ app.post('/users/login', async (req, res) => {
 });
 
 app.post('/cart/add', async (req, res) => {
-  const { userId, productId, quantity, color, size, price } = req.body;
+  const { userId, productId, quantity, color, size, price, name } = req.body;
   
   try {
       let cartResult = await pool.query('SELECT id FROM carts WHERE user_id = $1', [userId]);
