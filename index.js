@@ -37,9 +37,10 @@ app.post('/users/login', async (req, res) => {
       if (userResult.rows.length > 0) {
           const user = userResult.rows[0];
           if (bcrypt.compareSync(password, user.password_hash)) {
-              // Generate JWT token
-              const token = jwt.sign({ userId: user.id }, 'YourSecretKey', { expiresIn: '1h' });
-              res.json({ token });
+
+            const token = jwt.sign({ userId: user.id }, 'YourSecretKey', { expiresIn: '1h' });
+            res.json({ token, userId: user.id });
+
           } else {
               res.status(401).send('Invalid credentials');
           }
@@ -73,41 +74,61 @@ app.post('/cart/add', async (req, res) => {
   }
 });
 
-  
-
-
-app.post('/cart/remove', async (req, res) => {
-  const { cartItemId } = req.body; // Assuming the request includes the ID of the cart item to remove
+app.get('/cart/:userId', async (req, res) => {
+  const { userId } = req.params;
   
   try {
-      await pool.query('DELETE FROM cart_items WHERE id = $1', [cartItemId]);
-      res.send('Item removed from cart');
-  } catch (err) {
-      console.error(err);
-      res.status(500).send('Server error');
-  }
-});
-
-app.get('/cart', async (req, res) => {
-  const { userId } = req.query; // Assuming the request includes userId or obtained from token
-  
-  try {
-      const cartResult = await pool.query('SELECT id FROM carts WHERE user_id = $1', [userId]);
-      if (cartResult.rows.length > 0) {
-          const cartId = cartResult.rows[0].id;
-          const itemsResult = await pool.query(
-              'SELECT ci.quantity, p.id, p.name, p.price FROM cart_items ci JOIN products p ON ci.product_id = p.id WHERE ci.cart_id = $1',
-              [cartId]
-          );
-          res.json(itemsResult.rows);
-      } else {
-          res.status(404).send('Cart not found');
+      const cart = await pool.query('SELECT * FROM carts WHERE user_id = $1', [userId]);
+      if (cart.rows.length === 0) {
+          return res.status(404).json({ message: 'Cart not found' });
       }
+      
+      const items = await pool.query('SELECT * FROM cart_items WHERE cart_id = $1', [cart.rows[0].id]);
+      
+      return res.json({
+          ...cart.rows[0],
+          items: items.rows
+      });
   } catch (err) {
       console.error(err);
-      res.status(500).send('Server error');
+      return res.status(500).send('Server error');
   }
 });
+
+
+
+// app.post('/cart/remove', async (req, res) => {
+//   const { cartItemId } = req.body; // Assuming the request includes the ID of the cart item to remove
+  
+//   try {
+//       await pool.query('DELETE FROM cart_items WHERE id = $1', [cartItemId]);
+//       res.send('Item removed from cart');
+//   } catch (err) {
+//       console.error(err);
+//       res.status(500).send('Server error');
+//   }
+// });
+
+// app.get('/cart', async (req, res) => {
+//   const { userId } = req.query; // Assuming the request includes userId or obtained from token
+  
+//   try {
+//       const cartResult = await pool.query('SELECT id FROM carts WHERE user_id = $1', [userId]);
+//       if (cartResult.rows.length > 0) {
+//           const cartId = cartResult.rows[0].id;
+//           const itemsResult = await pool.query(
+//               'SELECT ci.quantity, p.id, p.name, p.price FROM cart_items ci JOIN products p ON ci.product_id = p.id WHERE ci.cart_id = $1',
+//               [cartId]
+//           );
+//           res.json(itemsResult.rows);
+//       } else {
+//           res.status(404).send('Cart not found');
+//       }
+//   } catch (err) {
+//       console.error(err);
+//       res.status(500).send('Server error');
+//   }
+// });
 
 
 app.get('/products', async (req, res) => {
