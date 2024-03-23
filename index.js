@@ -53,25 +53,26 @@ app.post('/users/login', async (req, res) => {
 });
 
 app.post('/cart/add', async (req, res) => {
-    const { userId, productId, quantity, color, size } = req.body;
-    
-    try {
-        let cartResult = await pool.query('SELECT id FROM carts WHERE user_id = $1', [userId]);
-        if (cartResult.rows.length === 0) {
-            cartResult = await pool.query('INSERT INTO carts (user_id) VALUES ($1) RETURNING id', [userId]);
-        }
-        const cartId = cartResult.rows[0].id;
+  const { userId, productId, quantity, color, size, price } = req.body;
   
-        const newItem = await pool.query(
-            'INSERT INTO cart_items (cart_id, product_id, quantity, color, size) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-            [cartId, productId, quantity, color, size]
-        );
-        res.json(newItem.rows[0]);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Server error');
-    }
-  });
+  try {
+      let cartResult = await pool.query('SELECT id FROM carts WHERE user_id = $1', [userId]);
+      if (cartResult.rows.length === 0) {
+          cartResult = await pool.query('INSERT INTO carts (user_id) VALUES ($1) RETURNING id', [userId]);
+      }
+      const cartId = cartResult.rows[0].id;
+
+      const newItem = await pool.query(
+          'INSERT INTO cart_items (cart_id, product_id, quantity, color, size, price) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+          [cartId, productId, quantity, color, size, price]
+      );
+      res.json(newItem.rows[0]);
+  } catch (err) {
+      console.error(err);
+      res.status(500).send('Server error');
+  }
+});
+
   
 
 
