@@ -74,6 +74,26 @@ app.post('/cart/add', async (req, res) => {
   }
 });
 
+app.delete('/cart/item/:itemId', async (req, res) => {
+  const { itemId } = req.params;
+
+  try {
+      // Assuming 'id' is the primary key for cart_items
+      const deleteResult = await pool.query('DELETE FROM cart_items WHERE id = $1 RETURNING *', [itemId]);
+
+      if (deleteResult.rows.length === 0) {
+          return res.status(404).send('Item not found');
+      }
+
+      res.json({ message: 'Item removed', item: deleteResult.rows[0] });
+  } catch (err) {
+      console.error(err);
+      res.status(500).send('Server error');
+  }
+});
+
+
+
 app.get('/cart/:userId', async (req, res) => {
   const { userId } = req.params;
   
