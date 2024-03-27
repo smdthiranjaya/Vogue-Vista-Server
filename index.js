@@ -9,13 +9,13 @@ app.use(express.json());
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false // Note: only use this for Heroku's free tier
+    rejectUnauthorized: false 
   }
 });
 
 app.post('/users/register', async (req, res) => {
   const { email, password, name } = req.body;
-  const hashedPassword = bcrypt.hashSync(password, 10); // Use bcrypt to hash the password
+  const hashedPassword = bcrypt.hashSync(password, 10); 
   
   try {
       const newUser = await pool.query(
@@ -52,6 +52,27 @@ app.post('/users/login', async (req, res) => {
       res.status(500).send('Server error');
   }
 });
+
+// Endpoint to fetch current user data
+app.get('/users/:id', async (req, res) => {
+  const { id } = req.params;
+  
+  try {
+      const userData = await pool.query(
+          'SELECT id, email, name, address FROM users WHERE id = $1',
+          [id]
+      );
+      if (userData.rows.length > 0) {
+          res.json(userData.rows[0]);
+      } else {
+          res.status(404).send('User not found');
+      }
+  } catch (err) {
+      console.error(err);
+      res.status(500).send('Server error');
+  }
+});
+
 
 app.post('/cart/add', async (req, res) => {
   const { userId, productId, quantity, color, size, price, name , imageUrl} = req.body;
@@ -114,42 +135,6 @@ app.get('/cart/:userId', async (req, res) => {
       return res.status(500).send('Server error');
   }
 });
-
-
-
-// app.post('/cart/remove', async (req, res) => {
-//   const { cartItemId } = req.body; // Assuming the request includes the ID of the cart item to remove
-  
-//   try {
-//       await pool.query('DELETE FROM cart_items WHERE id = $1', [cartItemId]);
-//       res.send('Item removed from cart');
-//   } catch (err) {
-//       console.error(err);
-//       res.status(500).send('Server error');
-//   }
-// });
-
-// app.get('/cart', async (req, res) => {
-//   const { userId } = req.query; // Assuming the request includes userId or obtained from token
-  
-//   try {
-//       const cartResult = await pool.query('SELECT id FROM carts WHERE user_id = $1', [userId]);
-//       if (cartResult.rows.length > 0) {
-//           const cartId = cartResult.rows[0].id;
-//           const itemsResult = await pool.query(
-//               'SELECT ci.quantity, p.id, p.name, p.price FROM cart_items ci JOIN products p ON ci.product_id = p.id WHERE ci.cart_id = $1',
-//               [cartId]
-//           );
-//           res.json(itemsResult.rows);
-//       } else {
-//           res.status(404).send('Cart not found');
-//       }
-//   } catch (err) {
-//       console.error(err);
-//       res.status(500).send('Server error');
-//   }
-// });
-
 
 app.get('/products', async (req, res) => {
   const { category, price, sort } = req.query;
