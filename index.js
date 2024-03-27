@@ -59,7 +59,7 @@ app.get('/users/:id', async (req, res) => {
   
   try {
       const userData = await pool.query(
-          'SELECT id, email, name, address FROM users WHERE id = $1',
+          'SELECT id::text, email, name, address FROM users WHERE id = $1', // Casting id to text
           [id]
       );
       if (userData.rows.length > 0) {
@@ -72,6 +72,8 @@ app.get('/users/:id', async (req, res) => {
       res.status(500).send('Server error');
   }
 });
+
+
 
 
 app.post('/cart/add', async (req, res) => {
