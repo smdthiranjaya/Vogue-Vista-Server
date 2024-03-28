@@ -158,9 +158,7 @@ app.get('/cart/:userId', async (req, res) => {
 });
 
 app.get('/products', async (req, res) => {
-  const { category, price, sort } = req.query;
-  // Add SQL query logic to filter and sort based on the parameters
-  // Example:
+  const { category, price, sort, search } = req.query;
   let query = 'SELECT * FROM products';
   let conditions = [];
   let queryParams = [];
@@ -169,13 +167,19 @@ app.get('/products', async (req, res) => {
       conditions.push('category = $1');
       queryParams.push(category);
   }
-  // Similar for price or any other filters
+  // Add similar conditions for price and other filters as needed
+  
+  // Handling search functionality
+  if (search) {
+    conditions.push('LOWER(name) LIKE LOWER($' + (queryParams.length + 1) + ')');
+    queryParams.push(`%${search}%`);
+  }
   
   if (conditions.length) {
-      query += ' WHERE ' + conditions.join(' AND ');
+    query += ' WHERE ' + conditions.join(' AND ');
   }
 
-  // Sorting logic, e.g., sort by price
+  // Sorting logic
   if (sort) {
       query += ' ORDER BY price ' + (sort === 'asc' ? 'ASC' : 'DESC');
   }
@@ -188,6 +192,7 @@ app.get('/products', async (req, res) => {
       res.status(500).send('Server error');
   }
 });
+
 
 // POST endpoint to add a new product
 app.post('/addproducts', async (req, res) => {
