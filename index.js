@@ -193,6 +193,18 @@ app.get('/products', async (req, res) => {
   }
 });
 
+app.get('/special-offers', async (req, res) => {
+  const query = 'SELECT * FROM products WHERE is_special_offer = true ORDER BY created_at DESC LIMIT 5';
+
+  try {
+      const result = await pool.query(query);
+      res.json(result.rows);
+  } catch (err) {
+      console.error(err);
+      res.status(500).send('Server error');
+  }
+});
+
 
 // POST endpoint to add a new product
 app.post('/addproducts', async (req, res) => {
