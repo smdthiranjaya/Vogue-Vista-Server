@@ -73,7 +73,26 @@ app.get('/users/:id', async (req, res) => {
   }
 });
 
-
+// Endpoint to update user data
+app.put('/users/:id', async (req, res) => {
+  const { id } = req.params;
+  const { name, email, address } = req.body;
+  
+  try {
+      const updateUser = await pool.query(
+          'UPDATE users SET name = $1, email = $2, address = $3 WHERE id = $4 RETURNING *',
+          [name, email, address, id]
+      );
+      if (updateUser.rows.length > 0) {
+          res.json(updateUser.rows[0]);
+      } else {
+          res.status(404).send('User not found');
+      }
+  } catch (err) {
+      console.error(err);
+      res.status(500).send('Server error');
+  }
+});
 
 
 app.post('/cart/add', async (req, res) => {
