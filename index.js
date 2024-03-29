@@ -134,6 +134,26 @@ app.delete('/cart/item/:itemId', async (req, res) => {
   }
 });
 
+app.post('/order/create', async (req, res) => {
+  const { userId, items, address, cardNumber, totalAmount, createdAt, status } = req.body;
+
+  try {
+      const insertResult = await pool.query(
+          'INSERT INTO orders (user_id, address, card_number, total_amount, created_at, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+          [userId, address, cardNumber, totalAmount, createdAt, status]
+      );
+      
+      // Assuming you handle order items in a separate table, you might also insert them here
+      // for (let item of items) {
+      //     await pool.query('INSERT INTO order_items (order_id, ...) VALUES ($1, ...)', [insertResult.rows[0].id, ...]);
+      // }
+
+      res.json(insertResult.rows[0]);
+  } catch (err) {
+      console.error(err);
+      res.status(500).send('Server error');
+  }
+});
 
 
 app.get('/cart/:userId', async (req, res) => {
@@ -167,9 +187,7 @@ app.get('/products', async (req, res) => {
       conditions.push('category = $1');
       queryParams.push(category);
   }
-  // Add similar conditions for price and other filters as needed
-  
-  // Handling search functionality
+
   if (search) {
     conditions.push('LOWER(name) LIKE LOWER($' + (queryParams.length + 1) + ')');
     queryParams.push(`%${search}%`);
