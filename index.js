@@ -135,25 +135,26 @@ app.delete('/cart/item/:itemId', async (req, res) => {
 });
 
 app.post('/order/create', async (req, res) => {
-  const { userId, items, address, cardNumber, totalAmount, createdAt, status } = req.body;
-
+  const { userId, address, cardNumber, totalAmount, createdAt, status, items } = req.body;
+  
   try {
-      const insertResult = await pool.query(
-          'INSERT INTO orders (user_id, address, card_number, total_amount, created_at, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-          [userId, address, cardNumber, totalAmount, createdAt, status]
-      );
-      
-      // Assuming you handle order items in a separate table, you might also insert them here
-      // for (let item of items) {
-      //     await pool.query('INSERT INTO order_items (order_id, ...) VALUES ($1, ...)', [insertResult.rows[0].id, ...]);
-      // }
+      const serializedItems = JSON.stringify(items); // Serialize items to a JSON string
 
-      res.json(insertResult.rows[0]);
+      // Insert the order, including serialized items, into the orders table
+      const insertResult = await pool.query(
+          'INSERT INTO orders (user_id, address, card_number, total_amount, created_at, status, items_details) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
+          [userId, address, cardNumber, totalAmount, createdAt, status, serializedItems]
+      );
+
+      const orderId = insertResult.rows[0].id;
+
+      res.status(201).json({ message: "Order successfully created", orderId: orderId });
   } catch (err) {
-      console.error(err);
+      console.error('Error creating order:', err);
       res.status(500).send('Server error');
   }
 });
+
 
 
 app.get('/cart/:userId', async (req, res) => {
