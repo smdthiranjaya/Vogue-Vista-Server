@@ -53,13 +53,12 @@ app.post('/users/login', async (req, res) => {
   }
 });
 
-// Endpoint to fetch current user data
 app.get('/users/:id', async (req, res) => {
   const { id } = req.params;
   
   try {
       const userData = await pool.query(
-          'SELECT id::text, email, name, address FROM users WHERE id = $1', // Casting id to text
+          'SELECT id::text, email, name, address FROM users WHERE id = $1',
           [id]
       );
       if (userData.rows.length > 0) {
@@ -73,7 +72,6 @@ app.get('/users/:id', async (req, res) => {
   }
 });
 
-// Endpoint to update user data
 app.put('/users/:id', async (req, res) => {
   const { id } = req.params;
   const { name, email, address } = req.body;
@@ -120,7 +118,6 @@ app.delete('/cart/item/:itemId', async (req, res) => {
   const { itemId } = req.params;
 
   try {
-      // Assuming 'id' is the primary key for cart_items
       const deleteResult = await pool.query('DELETE FROM cart_items WHERE id = $1 RETURNING *', [itemId]);
 
       if (deleteResult.rows.length === 0) {
@@ -198,7 +195,6 @@ app.get('/products', async (req, res) => {
     query += ' WHERE ' + conditions.join(' AND ');
   }
 
-  // Sorting logic
   if (sort) {
       query += ' ORDER BY price ' + (sort === 'asc' ? 'ASC' : 'DESC');
   }
@@ -225,7 +221,6 @@ app.get('/special-offers', async (req, res) => {
 });
 
 
-// POST endpoint to add a new product
 app.post('/addproducts', async (req, res) => {
     try {
       const { name, description, price, category, color, size, imageUrl } = req.body;
@@ -245,19 +240,19 @@ app.post('/addproducts', async (req, res) => {
     }
   });
 
-app.get('/products/:id', async (req, res) => {
-  const { id } = req.params;
-  try {
-      const productResult = await pool.query('SELECT * FROM products WHERE id = $1', [id]);
-      const imagesResult = await pool.query('SELECT image_url FROM product_images WHERE product_id = $1', [id]);
-      const product = productResult.rows[0];
-      product.images = imagesResult.rows.map(row => row.image_url);
-      res.json(product);
-  } catch (err) {
-      console.error(err);
-      res.status(500).send('Server error');
-  }
-});
+// app.get('/products/:id', async (req, res) => {
+//   const { id } = req.params;
+//   try {
+//       const productResult = await pool.query('SELECT * FROM products WHERE id = $1', [id]);
+//       const imagesResult = await pool.query('SELECT image_url FROM product_images WHERE product_id = $1', [id]);
+//       const product = productResult.rows[0];
+//       product.images = imagesResult.rows.map(row => row.image_url);
+//       res.json(product);
+//   } catch (err) {
+//       console.error(err);
+//       res.status(500).send('Server error');
+//   }
+// });
 
 
 const port = process.env.PORT || 3000;
