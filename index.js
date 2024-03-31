@@ -9,13 +9,13 @@ app.use(express.json());
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false // Note: only use this for Heroku's free tier
+    rejectUnauthorized: false 
   }
 });
 
 app.post('/users/register', async (req, res) => {
   const { email, password, name } = req.body;
-  const hashedPassword = bcrypt.hashSync(password, 10); // Use bcrypt to hash the password
+  const hashedPassword = bcrypt.hashSync(password, 10); 
   
   try {
       const newUser = await pool.query(
@@ -37,9 +37,10 @@ app.post('/users/login', async (req, res) => {
       if (userResult.rows.length > 0) {
           const user = userResult.rows[0];
           if (bcrypt.compareSync(password, user.password_hash)) {
-              // Generate JWT token
-              const token = jwt.sign({ userId: user.id }, 'YourSecretKey', { expiresIn: '1h' });
-              res.json({ token });
+
+            const token = jwt.sign({ userId: user.id }, 'YourSecretKey', { expiresIn: '1h' });
+            res.json({ token, userId: user.id });
+
           } else {
               res.status(401).send('Invalid credentials');
           }
@@ -52,22 +53,59 @@ app.post('/users/login', async (req, res) => {
   }
 });
 
-app.post('/cart/add', async (req, res) => {
-  const { userId, productId, quantity } = req.body; // Assuming the request includes userId or obtained from token
+app.get('/users/:id', async (req, res) => {
+  const { id } = req.params;
   
   try {
-      // First, ensure there's a cart for this user
+      const userData = await pool.query(
+          'SELECT id::text, email, name, address FROM users WHERE id = $1',
+          [id]
+      );
+      if (userData.rows.length > 0) {
+          res.json(userData.rows[0]);
+      } else {
+          res.status(404).send('User not found');
+      }
+  } catch (err) {
+      console.error(err);
+      res.status(500).send('Server error');
+  }
+});
+
+app.put('/users/:id', async (req, res) => {
+  const { id } = req.params;
+  const { name, email, address } = req.body;
+  
+  try {
+      const updateUser = await pool.query(
+          'UPDATE users SET name = $1, email = $2, address = $3 WHERE id = $4 RETURNING *',
+          [name, email, address, id]
+      );
+      if (updateUser.rows.length > 0) {
+          res.json(updateUser.rows[0]);
+      } else {
+          res.status(404).send('User not found');
+      }
+  } catch (err) {
+      console.error(err);
+      res.status(500).send('Server error');
+  }
+});
+
+
+app.post('/cart/add', async (req, res) => {
+  const { userId, productId, quantity, color, size, price, name , imageUrl} = req.body;
+  
+  try {
       let cartResult = await pool.query('SELECT id FROM carts WHERE user_id = $1', [userId]);
       if (cartResult.rows.length === 0) {
-          // If not, create a new cart
           cartResult = await pool.query('INSERT INTO carts (user_id) VALUES ($1) RETURNING id', [userId]);
       }
       const cartId = cartResult.rows[0].id;
 
-      // Then, add the item to the cart
       const newItem = await pool.query(
-          'INSERT INTO cart_items (cart_id, product_id, quantity) VALUES ($1, $2, $3) RETURNING *',
-          [cartId, productId, quantity]
+          'INSERT INTO cart_items (cart_id, product_id, quantity, color, size, price, name, imageUrl) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+          [cartId, productId, quantity, color, size, price, name, imageUrl]
       );
       res.json(newItem.rows[0]);
   } catch (err) {
@@ -76,45 +114,69 @@ app.post('/cart/add', async (req, res) => {
   }
 });
 
+app.delete('/cart/item/:itemId', async (req, res) => {
+  const { itemId } = req.params;
 
-app.post('/cart/remove', async (req, res) => {
-  const { cartItemId } = req.body; // Assuming the request includes the ID of the cart item to remove
-  
   try {
-      await pool.query('DELETE FROM cart_items WHERE id = $1', [cartItemId]);
-      res.send('Item removed from cart');
-  } catch (err) {
-      console.error(err);
-      res.status(500).send('Server error');
-  }
-});
+      const deleteResult = await pool.query('DELETE FROM cart_items WHERE id = $1 RETURNING *', [itemId]);
 
-app.get('/cart', async (req, res) => {
-  const { userId } = req.query; // Assuming the request includes userId or obtained from token
-  
-  try {
-      const cartResult = await pool.query('SELECT id FROM carts WHERE user_id = $1', [userId]);
-      if (cartResult.rows.length > 0) {
-          const cartId = cartResult.rows[0].id;
-          const itemsResult = await pool.query(
-              'SELECT ci.quantity, p.id, p.name, p.price FROM cart_items ci JOIN products p ON ci.product_id = p.id WHERE ci.cart_id = $1',
-              [cartId]
-          );
-          res.json(itemsResult.rows);
-      } else {
-          res.status(404).send('Cart not found');
+      if (deleteResult.rows.length === 0) {
+          return res.status(404).send('Item not found');
       }
+
+      res.json({ message: 'Item removed', item: deleteResult.rows[0] });
   } catch (err) {
       console.error(err);
       res.status(500).send('Server error');
   }
 });
 
+app.post('/order/create', async (req, res) => {
+  const { userId, address, cardNumber, totalAmount, createdAt, status, items } = req.body;
+  
+  try {
+      const serializedItems = JSON.stringify(items); // Serialize items to a JSON string
+
+      // Insert the order, including serialized items, into the orders table
+      const insertResult = await pool.query(
+          'INSERT INTO orders (user_id, address, card_number, total_amount, created_at, status, items_details) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
+          [userId, address, cardNumber, totalAmount, createdAt, status, serializedItems]
+      );
+
+      const orderId = insertResult.rows[0].id;
+
+      res.status(201).json({ message: "Order successfully created", orderId: orderId });
+  } catch (err) {
+      console.error('Error creating order:', err);
+      res.status(500).send('Server error');
+  }
+});
+
+
+
+app.get('/cart/:userId', async (req, res) => {
+  const { userId } = req.params;
+  
+  try {
+      const cart = await pool.query('SELECT * FROM carts WHERE user_id = $1', [userId]);
+      if (cart.rows.length === 0) {
+          return res.status(404).json({ message: 'Cart not found' });
+      }
+      
+      const items = await pool.query('SELECT * FROM cart_items WHERE cart_id = $1', [cart.rows[0].id]);
+      
+      return res.json({
+          ...cart.rows[0],
+          items: items.rows
+      });
+  } catch (err) {
+      console.error(err);
+      return res.status(500).send('Server error');
+  }
+});
 
 app.get('/products', async (req, res) => {
-  const { category, price, sort } = req.query;
-  // Add SQL query logic to filter and sort based on the parameters
-  // Example:
+  const { category, price, sort, search } = req.query;
   let query = 'SELECT * FROM products';
   let conditions = [];
   let queryParams = [];
@@ -123,13 +185,16 @@ app.get('/products', async (req, res) => {
       conditions.push('category = $1');
       queryParams.push(category);
   }
-  // Similar for price or any other filters
+
+  if (search) {
+    conditions.push('LOWER(name) LIKE LOWER($' + (queryParams.length + 1) + ')');
+    queryParams.push(`%${search}%`);
+  }
   
   if (conditions.length) {
-      query += ' WHERE ' + conditions.join(' AND ');
+    query += ' WHERE ' + conditions.join(' AND ');
   }
 
-  // Sorting logic, e.g., sort by price
   if (sort) {
       query += ' ORDER BY price ' + (sort === 'asc' ? 'ASC' : 'DESC');
   }
@@ -143,8 +208,20 @@ app.get('/products', async (req, res) => {
   }
 });
 
-// POST endpoint to add a new product
-app.post('/products', async (req, res) => {
+app.get('/special-offers', async (req, res) => {
+  const query = 'SELECT * FROM products WHERE is_special_offer = true ORDER BY created_at DESC LIMIT 5';
+
+  try {
+      const result = await pool.query(query);
+      res.json(result.rows);
+  } catch (err) {
+      console.error(err);
+      res.status(500).send('Server error');
+  }
+});
+
+
+app.post('/addproducts', async (req, res) => {
     try {
       const { name, description, price, category, color, size, imageUrl } = req.body;
       const query = `
@@ -163,20 +240,19 @@ app.post('/products', async (req, res) => {
     }
   });
 
-app.get('/products/:id', async (req, res) => {
-  const { id } = req.params;
-  try {
-      const productResult = await pool.query('SELECT * FROM products WHERE id = $1', [id]);
-      const imagesResult = await pool.query('SELECT image_url FROM product_images WHERE product_id = $1', [id]);
-      const product = productResult.rows[0];
-      product.images = imagesResult.rows.map(row => row.image_url);
-      res.json(product);
-  } catch (err) {
-      console.error(err);
-      res.status(500).send('Server error');
-  }
-});
-
+// app.get('/products/:id', async (req, res) => {
+//   const { id } = req.params;
+//   try {
+//       const productResult = await pool.query('SELECT * FROM products WHERE id = $1', [id]);
+//       const imagesResult = await pool.query('SELECT image_url FROM product_images WHERE product_id = $1', [id]);
+//       const product = productResult.rows[0];
+//       product.images = imagesResult.rows.map(row => row.image_url);
+//       res.json(product);
+//   } catch (err) {
+//       console.error(err);
+//       res.status(500).send('Server error');
+//   }
+// });
 
 
 const port = process.env.PORT || 3000;
