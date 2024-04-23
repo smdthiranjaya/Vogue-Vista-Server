@@ -1,5 +1,6 @@
-## Student ID : COBSCCOMP4Y222P-033
+![Vogue Vista Mobile App](https://github.com/smdthiranjaya/Vogue-Vista-Server/assets/37227365/4b367f9c-75d6-4f64-9525-d31e40c765fa)
 
+## Student ID : COBSCCOMP4Y222P-033
 
 ### Swift IOS Mobile App (Fontend) GitHub Link:
 https://github.com/smdthiranjaya/Vogue-Vista.git
